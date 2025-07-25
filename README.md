@@ -1,0 +1,1 @@
+# Linear-fitting-for-magnetism-materials-using-beta-and-gamma
