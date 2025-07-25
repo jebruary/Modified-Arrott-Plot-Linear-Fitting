@@ -1,4 +1,4 @@
-# Linear-fitting-for-magnetism-materials-using-beta-and-gamma
+# Modified Arrott Plot Linear Fitting
 This code only needs data file of magnetic field and magnetisation, with B field as first column, and M as second column.
 
 The normalised intercept here means intercept devided by the largest value of y data.
