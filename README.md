@@ -7,5 +7,8 @@ ATTENTION mind the size of steps and number of steps, DO NOT let beta to be nega
 
 ATTENTION at the y axis, there is a scaling number.
 
+The second script "several sets..." is for several data sets(different temperature) to fit and plot at the same picture, howver in this script the critical exponents are fixed(entered by the user).
+
+
 Any questions or mistakes made please contact zjcheng@yahoo.com 
 
