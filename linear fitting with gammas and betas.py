@@ -2,8 +2,6 @@
 """
 This code makes several linear fittings using the beta and gamma provided by
 the user.
-
-
 """
 
 import os
@@ -11,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-input_file_name = "branch21K.dat"
+input_file_name = "branch10K.dat"
 
 def read_magnetization_data(filename: str) -> tuple[np.ndarray, np.ndarray] | tuple[None, None]:
     """
@@ -55,20 +53,22 @@ def read_magnetization_data(filename: str) -> tuple[np.ndarray, np.ndarray] | tu
         print(f"Error: The file '{filename}' was not found.")
         return None, None
 
-def get_user_parameters() -> tuple[np.ndarray, np.ndarray, float, float, float, float, int]:
+def get_user_parameters() -> tuple[np.ndarray, np.ndarray, float, float, float, float, float, int]:
     """
     Asks the user for central values of gamma, beta, the critical
-    magnetic field, step size, and number of steps. It then creates
-    a range of points around gamma and beta.
+    magnetic field, step sizes for gamma and beta, and number of steps.
+    It then creates a range of points around gamma and beta.
 
     Returns:
         A tuple containing the gamma range, beta range, central gamma,
-        central beta, the critical magnetic field, step size, and number of steps.
+        central beta, the critical magnetic field, gamma step size,
+        beta step size, and number of steps.
     """
     gamma = None
     beta = None
     critical_field = None
-    step = None
+    step_gamma = None
+    step_beta = None
     num_steps = None
 
     while gamma is None:
@@ -99,18 +99,26 @@ def get_user_parameters() -> tuple[np.ndarray, np.ndarray, float, float, float, 
             critical_field = float(critical_field_input)
         except ValueError:
             print("Invalid input. Please enter a number for the critical magnetic field.")
-
-    while step is None:
+    
+    while step_gamma is None:
         try:
-            step_input = input("Enter the step size for gamma and beta (e.g., 0.05). This can be a float: ")
-            step = float(step_input)
-            if step <= 0:
-                print("Invalid input. Step size must be a positive number.")
-                step = None 
-            else:
-                print(f"Warning: Step size ({step}) is a float. Calculations will proceed with this value.")
+            step_input = input("Enter the step size for gamma (e.g., 0.05). This can be a float: ")
+            step_gamma = float(step_input)
+            if step_gamma <= 0:
+                print("Invalid input. Step size for gamma must be a positive number.")
+                step_gamma = None
         except ValueError:
-            print("Invalid input. Please enter a number for the step size.")
+            print("Invalid input. Please enter a number for the gamma step size.")
+    
+    while step_beta is None:
+        try:
+            step_input = input("Enter the step size for beta (e.g., 0.05). This can be a float: ")
+            step_beta = float(step_input)
+            if step_beta <= 0:
+                print("Invalid input. Step size for beta must be a positive number.")
+                step_beta = None
+        except ValueError:
+            print("Invalid input. Please enter a number for the beta step size.")
 
     while num_steps is None:
         try:
@@ -118,18 +126,19 @@ def get_user_parameters() -> tuple[np.ndarray, np.ndarray, float, float, float, 
             num_steps = int(num_steps_input)
             if num_steps < 0:
                 print("Invalid input. Number of steps cannot be negative. Please enter a non-negative integer.")
-                num_steps = None 
+                num_steps = None
         except ValueError:
             print("Invalid input. Please enter an integer for the number of steps.")
 
-    offsets = np.arange(-num_steps, num_steps + 1) * step
+    offsets_gamma = np.arange(-num_steps, num_steps + 1) * step_gamma
+    offsets_beta = np.arange(-num_steps, num_steps + 1) * step_beta
     
-    gamma_range = gamma + offsets
-    beta_range = beta + offsets
+    gamma_range = gamma + offsets_gamma
+    beta_range = beta + offsets_beta
 
-    return gamma_range, beta_range, gamma, beta, critical_field, step, num_steps
+    return gamma_range, beta_range, gamma, beta, critical_field, step_gamma, step_beta, num_steps
 
-def create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, folder_path, step, num_steps):
+def create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, folder_path, step_gamma, step_beta, num_steps):
     """
     Generates scaled datasets and saves each one to a text file.
 
@@ -139,7 +148,8 @@ def create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, 
         beta_values: NumPy array of beta values to test.
         gamma_values: NumPy array of gamma values to test.
         folder_path: The path to the directory where files will be saved.
-        step (float): The step size used for gamma and beta.
+        step_gamma (float): The step size used for gamma.
+        step_beta (float): The step size used for beta.
         num_steps (int): The number of steps used for gamma and beta.
 
     Returns:
@@ -149,7 +159,6 @@ def create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, 
     scaled_datasets = []
     
     
-   
     valid_data_mask = (m_data > 0) & (b_field > 0)
     m_data_filtered = m_data[valid_data_mask]
     b_field_filtered = b_field[valid_data_mask]
@@ -173,17 +182,17 @@ def create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, 
 
             scaled_datasets.append(dataset)
 
-            file_name = f"scaled_data_gamma_{gamma:.2f}_beta_{beta:.2f}_step_{step:.2f}_nsteps_{num_steps}.txt"
+            file_name = f"scaled_data_gamma_{gamma:.2f}_beta_{beta:.2f}_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.txt"
             file_path = os.path.join(folder_path, file_name)
             
             output_data = np.column_stack((b_field_filtered, m_data_filtered, x_scaled, y_scaled))
-            header = f"Original_B_Field\tOriginal_Magnetization\tScaled_X_Data\tScaled_Y_Data\nGamma: {gamma:.2f}, Beta: {beta:.2f}, Step: {step:.2f}, Num_Steps: {num_steps}"
+            header = f"Original_B_Field\tOriginal_Magnetization\tScaled_X_Data\tScaled_Y_Data\nGamma: {gamma:.2f}, Beta: {beta:.2f}, Gamma_Step: {step_gamma:.2f}, Beta_Step: {step_beta:.2f}, Num_Steps: {num_steps}"
             np.savetxt(file_path, output_data, delimiter='\t', header=header, fmt='%.8f')
             
     print(f"Successfully created and saved {len(scaled_datasets)} scaled datasets in '{folder_path}'")
     return scaled_datasets
 
-def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filename, step, num_steps):
+def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filename, step_gamma, step_beta, num_steps):
     """
     Performs linear fitting, finds the greatest normalised intercept and R-squared,
     saves all plots, and displays the two best plots.
@@ -211,7 +220,7 @@ def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filena
         max_y_value = np.max(y_data)
         normalised_intercept = intercept / max_y_value if max_y_value != 0 else 0
         
-      
+    
         if np.isnan(r_squared) or np.isnan(intercept):
             continue
 
@@ -236,7 +245,7 @@ def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filena
         plt.scatter(result['x_data'], result['y_data'], label='Scaled Data', alpha=0.6)
         plt.plot(result['x_fit'], result['y_predicted'], color='red', linewidth=2, label='Linear Fit')
         
-        plt.title(f'{input_filename} | Fit: γ={gamma:.2f}, β={beta:.2f}\nStep: {step:.2f}, Num Steps: {num_steps}')
+        plt.title(f'{input_filename} | Fit: γ={gamma:.2f}, β={beta:.2f}\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}')
         
         plt.xlabel(f'(B/M)^(1/{gamma:.2f})')
         plt.ylabel(f'M^(1/{beta:.2f})')
@@ -253,14 +262,14 @@ def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filena
         plt.grid(True)
         
         save_path = folder_path
-        filename = f"plot_gamma_{gamma:.2f}_beta_{beta:.2f}_step_{step:.2f}_nsteps_{num_steps}.png"
+        filename = f"plot_gamma_{gamma:.2f}_beta_{beta:.2f}_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png"
 
         if result == greatest_norm_intercept_params:
             save_path = "."
-            filename = f"GREATEST_NORM_INTERCEPT_gamma_{gamma:.2f}_beta_{beta:.2f}_step_{step:.2f}_nsteps_{num_steps}.png"
+            filename = f"GREATEST_NORM_INTERCEPT_gamma_{gamma:.2f}_beta_{beta:.2f}_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png"
         if result == best_r_squared_params:
             save_path = "."
-            filename = f"BEST_R_SQUARED_gamma_{gamma:.2f}_beta_{beta:.2f}_step_{step:.2f}_nsteps_{num_steps}.png"
+            filename = f"BEST_R_SQUARED_gamma_{gamma:.2f}_beta_{beta:.2f}_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png"
         
         plt.savefig(os.path.join(save_path, filename))
         plt.close(fig)
@@ -274,7 +283,7 @@ def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filena
         plt.scatter(result['x_data'], result['y_data'], label='Scaled Data', alpha=0.6)
         plt.plot(result['x_fit'], result['y_predicted'], color='red', linewidth=2, label='Linear Fit')
         
-        plt.title(f"{input_filename} | {title_prefix}\nγ={gamma:.2f}, β={beta:.2f}\nStep: {step:.2f}, Num Steps: {num_steps}")
+        plt.title(f"{input_filename} | {title_prefix}\nγ={gamma:.2f}, β={beta:.2f}\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}")
         
         plt.xlabel(f'(B/M)^(1/{gamma:.2f})')
         plt.ylabel(f'M^(1/{beta:.2f})')
@@ -301,7 +310,7 @@ def perform_fitting_and_save_plots(datasets, hc_value, folder_path, input_filena
     return all_results, greatest_norm_intercept_params, best_r_squared_params
 
 
-def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, folder_path, input_filename, step, num_steps):
+def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, folder_path, input_filename, step_gamma, step_beta, num_steps):
     """
     Creates, saves, and displays 2D and 3D scatter plots for R-squared and
     Intercept values.
@@ -312,7 +321,8 @@ def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, f
         best_r_squared (dict): The result dictionary for the best R-squared.
         folder_path (str): The path to save the plots.
         input_filename (str): The name of the original data file.
-        step (float): The step size used for gamma and beta.
+        step_gamma (float): The step size used for gamma.
+        step_beta (float): The step size used for beta.
         num_steps (int): The number of steps used for gamma and beta.
     """
     print("\n--- Creating Summary Plots ---")
@@ -326,7 +336,7 @@ def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, f
     intercepts = np.array([res['intercept'] for res in all_results])
     normalised_intercepts = np.array([res['normalised_intercept'] for res in all_results])
 
-   
+    
     fig_int_2d = plt.figure(figsize=(10, 7))
     ax_int_2d = fig_int_2d.add_subplot(111)
     sc_int_2d = ax_int_2d.scatter(gammas, betas, c=intercepts, cmap='plasma', s=100, alpha=0.8)
@@ -345,46 +355,46 @@ def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, f
 
     ax_int_2d.set_xlabel('Gamma (γ)')
     ax_int_2d.set_ylabel('Beta (β)')
-    ax_int_2d.set_title(f'{input_filename} | 2D Scatter of Intercept vs. Exponents\nStep: {step:.2f}, Num Steps: {num_steps}')
+    ax_int_2d.set_title(f'{input_filename} | 2D Scatter of Intercept vs. Exponents\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}')
     ax_int_2d.grid(True)
     fig_int_2d.colorbar(sc_int_2d, label='Intercept Value')
-    int_2d_plot_filename = os.path.join(folder_path, f"2D_Intercept_Scatter_step_{step:.2f}_nsteps_{num_steps}.png")
+    int_2d_plot_filename = os.path.join(folder_path, f"2D_Intercept_Scatter_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png")
     plt.savefig(int_2d_plot_filename)
     print(f"Saved Intercept 2D scatter plot to '{int_2d_plot_filename}'")
     
     
-   
+    
     fig_r2_2d = plt.figure(figsize=(10, 7))
     ax_r2_2d = fig_r2_2d.add_subplot(111)
     
-   
+    
     sc_r2_2d = ax_r2_2d.scatter(gammas, betas, c=r_squareds, cmap='viridis', s=100, alpha=0.8, vmin=0.95, vmax=1.0)
     
     ax_r2_2d.set_xlabel('Gamma (γ)')
     ax_r2_2d.set_ylabel('Beta (β)')
-    ax_r2_2d.set_title(f'{input_filename} | 2D Scatter of R² vs. Exponents\nStep: {step:.2f}, Num Steps: {num_steps}')
+    ax_r2_2d.set_title(f'{input_filename} | 2D Scatter of R² vs. Exponents\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}')
     ax_r2_2d.grid(True)
     fig_r2_2d.colorbar(sc_r2_2d, label='R-squared Value')
-    r2_2d_plot_filename = os.path.join(folder_path, f"2D_R_Squared_Scatter_step_{step:.2f}_nsteps_{num_steps}.png")
+    r2_2d_plot_filename = os.path.join(folder_path, f"2D_R_Squared_Scatter_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png")
     plt.savefig(r2_2d_plot_filename)
     print(f"Saved R-squared 2D scatter plot to '{r2_2d_plot_filename}'")
     
     
-   
+    
     fig_norm_int_2d = plt.figure(figsize=(10, 7))
     ax_norm_int_2d = fig_norm_int_2d.add_subplot(111)
     sc_norm_int_2d = ax_norm_int_2d.scatter(gammas, betas, c=normalised_intercepts, cmap='magma', s=100, alpha=0.8)
     ax_norm_int_2d.set_xlabel('Gamma (γ)')
     ax_norm_int_2d.set_ylabel('Beta (β)')
-    ax_norm_int_2d.set_title(f'{input_filename} | 2D Scatter of Norm. Intercept vs. Exponents\nStep: {step:.2f}, Num Steps: {num_steps}')
+    ax_norm_int_2d.set_title(f'{input_filename} | 2D Scatter of Norm. Intercept vs. Exponents\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}')
     ax_norm_int_2d.grid(True)
     fig_norm_int_2d.colorbar(sc_norm_int_2d, label='Normalised Intercept Value')
-    norm_int_2d_plot_filename = os.path.join(folder_path, f"2D_Normalised_Intercept_Scatter_step_{step:.2f}_nsteps_{num_steps}.png")
+    norm_int_2d_plot_filename = os.path.join(folder_path, f"2D_Normalised_Intercept_Scatter_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png")
     plt.savefig(norm_int_2d_plot_filename)
     print(f"Saved Normalised Intercept 2D scatter plot to '{norm_int_2d_plot_filename}'")
     
 
-   
+    
     fig_r2_3d = plt.figure(figsize=(10, 7))
     ax_r2_3d = fig_r2_3d.add_subplot(111, projection='3d')
     sc_r2_3d = ax_r2_3d.scatter(gammas, betas, r_squareds, c=r_squareds, cmap='viridis', label='All R² values', vmin=0.8, vmax=1.0)
@@ -394,14 +404,14 @@ def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, f
     ax_r2_3d.set_xlabel('Gamma (γ)')
     ax_r2_3d.set_ylabel('Beta (β)')
     ax_r2_3d.set_zlabel('R-squared (R²)')
-    ax_r2_3d.set_title(f'{input_filename} | R-squared 3D Scatter Plot\nStep: {step:.2f}, Num Steps: {num_steps}')
+    ax_r2_3d.set_title(f'{input_filename} | R-squared 3D Scatter Plot\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}')
     ax_r2_3d.legend()
     fig_r2_3d.colorbar(sc_r2_3d, ax=ax_r2_3d, shrink=0.5, aspect=5, label='R-squared Value')
-    r2_plot_filename = os.path.join(folder_path, f"3D_R_Squared_Scatter_step_{step:.2f}_nsteps_{num_steps}.png")
+    r2_plot_filename = os.path.join(folder_path, f"3D_R_Squared_Scatter_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png")
     plt.savefig(r2_plot_filename)
     print(f"Saved R-squared 3D plot to '{r2_plot_filename}'")
     
-   
+    
     fig_int_3d = plt.figure(figsize=(10, 7))
     ax_int_3d = fig_int_3d.add_subplot(111, projection='3d')
     sc_int_3d = ax_int_3d.scatter(gammas, betas, intercepts, c=intercepts, cmap='plasma', label='All Intercept values')
@@ -409,16 +419,16 @@ def create_summary_plots(all_results, greatest_norm_intercept, best_r_squared, f
     g_int, b_int, int_val = greatest_norm_intercept['gamma'], greatest_norm_intercept['beta'], greatest_norm_intercept['intercept']
     norm_int_val = greatest_norm_intercept['normalised_intercept']
     ax_int_3d.scatter(g_int, b_int, int_val,
-                          color='cyan', s=150, edgecolor='black', depthshade=True, label=f"Greatest Norm. Intercept ({norm_int_val:.4f})")
+                      color='cyan', s=150, edgecolor='black', depthshade=True, label=f"Greatest Norm. Intercept ({norm_int_val:.4f})")
     ax_int_3d.text(g_int, b_int, int_val, f'  ({g_int:.2f}, {b_int:.2f}, {int_val:.4f})', color='black', fontsize=12)
     
     ax_int_3d.set_xlabel('Gamma (γ)')
     ax_int_3d.set_ylabel('Beta (β)')
     ax_int_3d.set_zlabel('Intercept')
-    ax_int_3d.set_title(f'{input_filename} | Intercept 3D Scatter Plot\nStep: {step:.2f}, Num Steps: {num_steps}')
+    ax_int_3d.set_title(f'{input_filename} | Intercept 3D Scatter Plot\nGamma Step: {step_gamma:.2f}, Beta Step: {step_beta:.2f}, Num Steps: {num_steps}')
     ax_int_3d.legend()
     fig_int_3d.colorbar(sc_int_3d, ax=ax_int_3d, shrink=0.5, aspect=5, label='Intercept Value')
-    int_plot_filename = os.path.join(folder_path, f"3D_Intercept_Scatter_step_{step:.2f}_nsteps_{num_steps}.png")
+    int_plot_filename = os.path.join(folder_path, f"3D_Intercept_Scatter_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}.png")
     plt.savefig(int_plot_filename)
     print(f"Saved Intercept 3D plot to '{int_plot_filename}'")
 
@@ -439,22 +449,21 @@ def main():
 
     
     print("\n--- Parameter Input ---")
-    gamma_values, beta_values, gamma_center, beta_center, hc_value, step, num_steps = get_user_parameters()
-    base_name = os.path.splitext(input_file_name)[0]
-    folder_name = f"{base_name}_gamma_{gamma_center:.2f}_beta_{beta_center:.2f}_hc_{hc_value:.2f}_step_{step:.2f}_nsteps_{num_steps}"
+    gamma_values, beta_values, gamma_center, beta_center, hc_value, step_gamma, step_beta, num_steps = get_user_parameters()
+    folder_name = f"{os.path.splitext(input_file_name)[0]}_gamma_{gamma_center:.2f}_beta_{beta_center:.2f}_hc_{hc_value:.2f}_step_gamma_{step_gamma:.2f}_step_beta_{step_beta:.2f}_nsteps_{num_steps}"
     os.makedirs(folder_name, exist_ok=True)
     print(f"Created output directory: '{folder_name}'")
 
     
-    all_datasets = create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, folder_name, step, num_steps)
+    all_datasets = create_and_save_scaled_datasets(m_data, b_field, beta_values, gamma_values, folder_name, step_gamma, step_beta, num_steps)
     
     all_results, greatest_norm_intercept, best_r_squared = perform_fitting_and_save_plots(
-        all_datasets, hc_value, folder_name, input_file_name, step, num_steps
+        all_datasets, hc_value, folder_name, input_file_name, step_gamma, step_beta, num_steps
     )
 
     if all_results:
         create_summary_plots(
-            all_results, greatest_norm_intercept, best_r_squared, folder_name, input_file_name, step, num_steps
+            all_results, greatest_norm_intercept, best_r_squared, folder_name, input_file_name, step_gamma, step_beta, num_steps
         )
 
     print("\n--- Best Fit Summary ---")
@@ -476,7 +485,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
-    
-    
-    
