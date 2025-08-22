@@ -72,13 +72,16 @@ def analyze_and_plot_data():
         for i, file_path in enumerate(data_files):
             try:
                 
+              
+                filename_without_ext = os.path.splitext(os.path.basename(file_path))[0]
+                
                 data = np.loadtxt(file_path)
                 B = data[:, 0]
                 M = data[:, 1]
                 
                 valid_indices = M > 0
                 if not np.any(valid_indices):
-                    print(f"Skipping {os.path.basename(file_path)}: No valid magnetization data (M > 0).")
+                    print(f"Skipping {filename_without_ext}: No valid magnetization data (M > 0).")
                     continue
 
                 B = B[valid_indices]
@@ -97,7 +100,7 @@ def analyze_and_plot_data():
                         linestyle='none', 
                         markerfacecolor='none', 
                         markeredgecolor=f'C{i}', 
-                        label=f'Dataset: {os.path.basename(file_path)}')
+                        label=f'{filename_without_ext}') 
 
                 critical_idx = np.argmin(np.abs(B_filtered - critical_b))
 
@@ -105,7 +108,7 @@ def analyze_and_plot_data():
                 y_fit = y[critical_idx:]
 
                 if len(x_fit) < 2:
-                    print(f"Warning for {os.path.basename(file_path)}: Not enough data points (need at least 2) for linear fitting after the critical field. Skipping fit.")
+                    print(f"Warning for {filename_without_ext}: Not enough data points (need at least 2) for linear fitting after the critical field. Skipping fit.")
                     continue
 
                 model = LinearRegression()
@@ -113,7 +116,7 @@ def analyze_and_plot_data():
                 intercept = model.intercept_
                 slope = model.coef_[0]
 
-                intercepts[os.path.basename(file_path)] = intercept
+                intercepts[filename_without_ext] = intercept 
         
                 x_fit_start = x_fit.min()
                 x_fit_end = x_fit.max()
@@ -124,7 +127,7 @@ def analyze_and_plot_data():
                         linestyle='-', 
                         linewidth=3,    
                         color=f'C{i}',
-                        label=f'Fit for {os.path.basename(file_path)}')
+                        label=f'Fit for {filename_without_ext}') 
                 
                 ax.plot([0, x_fit_start], [intercept, y_fit_start],
                         linestyle='--',
@@ -136,7 +139,7 @@ def analyze_and_plot_data():
                 all_y_data_for_plot.append(np.array([intercept])) 
 
             except Exception as e:
-                print(f"An error occurred while processing {os.path.basename(file_path)}: {e}")
+                print(f"An error occurred while processing {filename_without_ext}: {e}") 
         
 
         if all_x_data_for_plot and all_y_data_for_plot:
@@ -156,7 +159,7 @@ def analyze_and_plot_data():
         print("\n--- Intercepts of Linear Fittings ---")
         if intercepts:
             for filename, intercept_val in intercepts.items():
-                print(f"  - {filename}: {intercept_val:.6f}")
+                print(f"  - {filename}: {intercept_val:.6f}") 
         else:
             print("No intercepts were calculated.")
 
